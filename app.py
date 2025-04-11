@@ -22,32 +22,6 @@ This interactive map displays safety ratings across India based on crime statist
 - 🔴 Red areas represent higher risk areas
 """)
 
-# Load India state geojson
-@st.cache_data
-def load_geojson():
-    try:
-        # Try to access the file from the GitHub URL (public and reliable source)
-        with open('india_states.geojson', 'r') as f:
-            return json.load(f)
-    except Exception:
-        # If local file fails, use a hardcoded simplified version with just essential properties
-        # This is a fallback to ensure the app doesn't crash
-        st.warning("Using simplified map data. For better visualization, ensure 'india_states.geojson' is available.")
-        return {
-            "type": "FeatureCollection",
-            "features": [
-                {"type": "Feature", "properties": {"st_nm": state}, "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]]]}} 
-                for state in [
-                    'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
-                    'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
-                    'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
-                    'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
-                    'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
-                    'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Delhi', 'Chandigarh', 'Puducherry'
-                ]
-            ]
-        }
-
 # Load real NCRB crime data
 @st.cache_data
 def load_crime_data():
@@ -177,7 +151,6 @@ def load_crime_data():
 
 # Load the data
 crime_data = load_crime_data()
-india_geojson = load_geojson()
 
 # Sidebar for filtering options
 st.sidebar.header("Filter Options")
@@ -254,69 +227,7 @@ else:
     st.info(f"The {crime_category.replace('_', ' ')} rate represents incidents per 100,000 population. Lower rates indicate safer regions.")
 
 # Show the visualization based on selection
-if viz_type == "Choropleth Map":
-    try:
-        # Prepare the data for choropleth
-        choropleth_data = filtered_data.copy()
-        
-        # Create the choropleth map
-        fig = px.choropleth(
-            choropleth_data,
-            geojson=india_geojson,
-            locations="state",
-            featureidkey="properties.st_nm",
-            color=crime_category,
-            color_continuous_scale=color_scale,
-            scope="asia",
-            labels={crime_category: direction},
-            title=f"{crime_category.replace('_', ' ').title()} by State"
-        )
-        
-        # Configure map layout
-        fig.update_geos(
-            fitbounds="locations",
-            visible=False,
-            center={"lat": 23.5937, "lon": 78.9629},  # Center of India
-            projection_scale=4
-        )
-        
-        fig.update_layout(height=600, margin={"r": 0, "t": 30, "l": 0, "b": 0})
-        
-        # Show the map
-        st.plotly_chart(fig, use_container_width=True)
-        
-    except Exception as e:
-        st.error(f"Error displaying choropleth map: {e}")
-        st.info("Switching to alternative map visualization...")
-        
-        # Fallback to bubble map
-        fig = px.scatter_geo(
-            filtered_data,
-            lat="latitude",
-            lon="longitude",
-            color=crime_category,
-            hover_name="state",
-            size="population",
-            size_max=35,
-            color_continuous_scale=color_scale,
-            title=f"{crime_category.replace('_', ' ').title()} by State"
-        )
-        
-        fig.update_layout(
-            geo=dict(
-                scope='asia',
-                showland=True,
-                landcolor='rgb(217, 217, 217)',
-                countrycolor='rgb(255, 255, 255)',
-                center={"lat": 23.5937, "lon": 78.9629},  # Center of India
-                projection_scale=4
-            ),
-            height=600
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
-
-elif viz_type == "Bubble Map":
+if viz_type == "Bubble Map":
     # Create bubble map using scatter_geo
     bubble_sizes = filtered_data['population'] / filtered_data['population'].max() * 40 + 5
     
